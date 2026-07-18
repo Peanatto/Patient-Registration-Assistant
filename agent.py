@@ -66,30 +66,36 @@ def main() -> int:
     )
 
     prompt = """
-        I am implementing the Engine layer for ucr-club-assistant.
-        Context: Read CONTRACT.md, FUNCTIONALITY.md, src/storage/storage_handler.py 
-                and tests/engine/test_engine.py.
-        Goal: Implement process_request(user_input: str) -> dict in src/engine/engine.py.
+        I am implementing the Interface layer for patient-registration-assistant.
+        Context: Read CONTRACT.md, FUNCTIONALITY.md, src/engine/engine.py, and tests/interface/test_interface.py.
+        Goal: Implement format_response(result: dict) -> str and run_session(process_fn=None)
+            in src/interface/cli.py.
         Requirements:
-        1. Step 1 — Tool Use: Initialize an AI model client using _API_KEY and _MODEL from
-        engine.py. Call the model with _EXTRACTION_PROMPT as the system instruction and
-        user_input as the user message. Enforce JSON output. Parse the response to extract:
-        {"intent": "register"|"list"|"delete"|"unknown", "data": {field: value, ...}}
-        Load _API_KEY from os.getenv() only; never hardcode it.
-        2. Step 2 — Reflection: Call the model again with _REFLECTION_PROMPT formatted with
-        the extraction result. Enforce JSON output. Parse the response to get
-        {"complete": bool, "missing": [...]}.
-        If complete is False, return {"status": "incomplete", "message": ..., "missing": [...]}
-        immediately — do NOT call any storage function.
-        3. Step 3 — Dispatch: Based on intent, call:
-        - "register" → save_patient(data)              returns "success" | "exists" | "error"
-        - "list"     → get_patients()                  returns list of dicts
-        - "delete"   → delete_patient(data.get("patient_id")) returns "success" | "not_found" | "error"
-        - "unknown"  → return {"status": "unknown", "message": "...", "data": None}
-        4. Return contract: every code path returns a dict with at least "status" and "message" keys.
-        5. Import save_patient, get_patients, delete_patient at the top of engine.py
-        so the patch paths in tests (src.engine.engine.*) resolve correctly.
-        6. Wrap all logic in try/except; return {"status": "error", "message": str(e), "data": None}.
+        1. format_response: Read result["status"] and return a formatted string for each case:
+        - "success"    → start with result["message"]; if result.get("data") is a non-empty
+                            list, append each patient's name and ID on an indented line,
+                            e.g., "  - {name} ({patient_id})".
+        - "exists"     → return result["message"].
+        - "incomplete" → return result["message"] + "\n  Missing: " +
+                            ", ".join(result["missing"]).
+        - "unknown"    → return result["message"] + "\n\n" + _HELP_TEXT.
+        - "error" and all other statuses → return result.get("message", "Unexpected response.").
+        Do not raise; always return a string.
+        2. run_session: Loop calling input("You: ") to read one line at a time.
+        - Skip blank lines (after strip).
+        - Exit cleanly (print a goodbye message and return) when the line equals "quit"
+            or "exit" (case-insensitive), or when EOFError is raised.
+        - For all other input, call process_fn(user_input) to get a result dict,
+            then print "Assistant: " followed by format_response(result).
+        - Print a blank line after each response for readability.
+        3. process_fn defaults to process_request imported from src.engine.engine at the
+        top of cli.py. Inside run_session, always call process_fn(user_input) —
+        never call process_request directly — so tests can inject a mock.
+        4. Import process_request at the top of cli.py:
+            from src.engine.engine import process_request
+        This ensures the patch path "src.interface.cli.process_request" is valid if needed.
+        5. Do not modify or weaken any tests.
+        6. Do not modify any base code that does not need to be modified. Simply add the required implementations
         """
 
     print("Starting agent reasoning loop to implement green state...")

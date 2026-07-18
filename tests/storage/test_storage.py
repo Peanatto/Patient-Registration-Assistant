@@ -28,4 +28,4 @@ def test_duplicate_patient_id_prevention():
 def test_missing_fields_error():
     incomplete_data = {"name": "Bob"}  # Missing date_of_birth, patient_id, medications
     result = save_patient(incomplete_data)
-    assert result == "incomplete"
+    assert result == "error"
