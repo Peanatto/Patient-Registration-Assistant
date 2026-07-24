@@ -70,6 +70,7 @@ def test_format_unknown_includes_help_text():
     # Help text must mention at least one available action so the user knows
     # what to do next.
     assert "register" in output.lower() or "list" in output.lower() or "delete" in output.lower()
+    assert "book" in output.lower() or "cancel" in output.lower() or "appointment" in output.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -185,3 +186,24 @@ def test_format_not_found_returns_message():
     result = {"status": "not_found", "message": "Cannot book appointment. Patient ID PT-99999999 not found.", "data": None}
     output = format_response(result)
     assert "not found" in output
+
+
+# ---------------------------------------------------------------------------
+# Test 13: format_response — success with a booking list
+# ---------------------------------------------------------------------------
+def test_format_success_with_booking_list_shows_details():
+    result = {
+        "status": "success",
+        "message": "2 bookings found.",
+        "data": [
+            {"patient_id": "PT-123", "date": "2024-07-20", "time": "10:00"},
+            {"patient_id": "PT-456", "date": "2024-07-21", "time": "14:30"},
+        ],
+    }
+    output = format_response(result)
+    assert "PT-123" in output
+    assert "2024-07-20" in output
+    assert "10:00" in output
+    assert "PT-456" in output
+    assert "2024-07-21" in output
+    assert "14:30" in output

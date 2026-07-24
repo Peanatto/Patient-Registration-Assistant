@@ -56,7 +56,7 @@ def test_list_patients_returns_success_with_data():
 # Test 4: Reflection — incomplete registration blocks storage call
 # ---------------------------------------------------------------------------
 def test_incomplete_registration_is_blocked_before_storage():
-    with patch("src.engine.engine.save_patient") as mock_save:
+    with patch("src.engine.engine.save_patient") as mock_save:\
         result = process_request("Register Bob.")  # Missing date_of_birth, patient_id, and medications
     assert result["status"] == "incomplete"
     assert "missing" in result
@@ -112,7 +112,7 @@ def test_register_storage_error_returns_error_status():
 # ---------------------------------------------------------------------------
 def test_delete_missing_patient_id_returns_error_status():
     with patch("src.engine.engine.delete_patient") as mock_delete:
-        result = process_request("Delete a patient record without providing an ID.")
+        result = process_request("Delete the patient record.")
     assert result["status"] == "error"
     assert result["message"] == "Patient ID not provided for deletion."
     mock_delete.assert_not_called()
@@ -139,13 +139,14 @@ def test_process_request_exception_handling_returns_error_status():
     assert "Simulated API client error" in result["message"]
     assert result["data"] is None
 
+
 # ---------------------------------------------------------------------------
 # Test 12: Booking success
 # ---------------------------------------------------------------------------
 def test_book_success_returns_correct_status():
-    with patch("src.engine.engine.verify_patient", return_value=True) as mock_verify_patient, \
+    with patch("src.engine.engine.verify_patient", return_value=True) as mock_verify_patient,\
          patch("src.engine.engine.save_booking", return_value="success") as mock_save_booking:
-        result = process_request("Book an appointment for PT-98765432 on 12-25-2023 at 14:00.")
+         result = process_request("Book an appointment for PT-98765432 on 12-25-2023 at 14:00.")
     assert result["status"] == "success"
     assert "message" in result
     mock_verify_patient.assert_called_once_with("PT-98765432")
@@ -156,7 +157,7 @@ def test_book_success_returns_correct_status():
 # ---------------------------------------------------------------------------
 def test_book_patient_not_found_returns_not_found_status():
     with patch("src.engine.engine.verify_patient", return_value=False) as mock_verify_patient, \
-         patch("src.engine.engine.save_booking") as mock_save_booking:
+         patch("src.engine.engine.save_booking") as mock_save_booking:\
         result = process_request("Book an appointment for PT-11111111 on 01-01-2024 at 10:00.")
     assert result["status"] == "not_found"
     assert "message" in result
@@ -168,7 +169,7 @@ def test_book_patient_not_found_returns_not_found_status():
 # ---------------------------------------------------------------------------
 def test_book_incomplete_returns_incomplete_status():
     with patch("src.engine.engine.verify_patient") as mock_verify_patient, \
-         patch("src.engine.engine.save_booking") as mock_save_booking:
+         patch("src.engine.engine.save_booking") as mock_save_booking:\
         result = process_request("Book an appointment for PT-22222222.") # Missing date and time
     assert result["status"] == "incomplete"
     assert "missing" in result
@@ -182,9 +183,73 @@ def test_book_incomplete_returns_incomplete_status():
 # ---------------------------------------------------------------------------
 def test_book_storage_error_returns_error_status():
     with patch("src.engine.engine.verify_patient", return_value=True) as mock_verify_patient, \
-         patch("src.engine.engine.save_booking", return_value="error") as mock_save_booking:
+         patch("src.engine.engine.save_booking", return_value="error") as mock_save_booking:\
         result = process_request("Book an appointment for PT-33333333 on 02-02-2024 at 11:30.")
     assert result["status"] == "error"
     assert "message" in result
     mock_verify_patient.assert_called_once_with("PT-33333333")
     mock_save_booking.assert_called_once_with("PT-33333333", "02-02-2024", "11:30")
+
+# ---------------------------------------------------------------------------
+# Test 16: List bookings
+# ---------------------------------------------------------------------------
+def test_list_bookings_returns_success_with_data():
+    mock_bookings = [
+        {"patient_id": "PT-12345678", "date": "12-25-2023", "time": "14:00"},
+        {"patient_id": "PT-87654321", "date": "01-15-2024", "time": "10:30"}
+    ]
+    with patch("src.engine.engine.get_bookings", return_value=mock_bookings):\
+        result = process_request("Show me all current appointments")
+    assert result["status"] == "success"
+    assert isinstance(result["data"], list)
+    assert result["data"] == mock_bookings
+
+# ---------------------------------------------------------------------------
+# Test 17: Cancel booking — success path
+# ---------------------------------------------------------------------------
+def test_cancel_booking_success_returns_correct_status():
+    with patch("src.engine.engine.delete_booking", return_value="success") as mock_delete:\
+        result = process_request("Cancel the appointment for PT-12345678 on 12-25-2023 at 14:00")
+    assert result["status"] == "success"
+    assert "message" in result
+    mock_delete.assert_called_once_with("PT-12345678", "12-25-2023", "14:00")
+
+# ---------------------------------------------------------------------------
+# Test 18: Cancel booking — not found path
+# ---------------------------------------------------------------------------
+def test_cancel_booking_not_found_returns_correct_status():
+    with patch("src.engine.engine.delete_booking", return_value="not_found"):\
+        result = process_request("Cancel the appointment for PT-11111111 on 01-01-2025 at 09:00")
+    assert result["status"] == "not_found"
+    assert "message" in result
+
+# ---------------------------------------------------------------------------
+# Test 19: Cancel booking — incomplete is blocked before storage
+# ---------------------------------------------------------------------------
+def test_cancel_booking_incomplete_is_blocked_before_storage():
+    with patch("src.engine.engine.delete_booking") as mock_delete:\
+        result = process_request("Cancel the appointment for PT-12345678 on 12-25-2023") # Missing time
+    assert result["status"] == "incomplete"
+    assert "missing" in result
+    assert "time" in result["missing"]
+    mock_delete.assert_not_called()
+
+# ---------------------------------------------------------------------------
+# Test 20: Cancel booking — storage error returns error status
+# ---------------------------------------------------------------------------
+def test_cancel_booking_storage_error_returns_error_status():
+    with patch("src.engine.engine.delete_booking", return_value="error"):\
+        result = process_request("Cancel the appointment for PT-99999999 on 03-03-2024 at 15:00")
+    assert result["status"] == "error"
+    assert "message" in result
+
+# ---------------------------------------------------------------------------
+# Test 21: Cancel booking — missing patient_id
+# ---------------------------------------------------------------------------
+def test_cancel_booking_missing_patient_id_returns_incomplete_status():
+    with patch("src.engine.engine.delete_booking") as mock_delete:\
+        result = process_request("Cancel the appointment on 12-25-2023 at 14:00") # Missing patient_id
+    assert result["status"] == "incomplete"
+    assert "missing" in result
+    assert "patient_id" in result["missing"]
+    mock_delete.assert_not_called()

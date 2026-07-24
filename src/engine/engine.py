@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 
 # Import unified storage functions at the top so tests can patch them via
 # "src.engine.engine.save_patient" (the path where they are USED).
-from src.storage.storage_handler import delete_patient, get_patients, save_patient, save_booking, verify_patient
+from src.storage.storage_handler import delete_patient, get_patients, save_patient, save_booking, verify_patient, get_bookings, delete_booking
 from google import genai
 from google.genai import types
 from google.genai.types import HttpOptions
@@ -35,7 +35,7 @@ _MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
 _EXTRACTION_PROMPT = """
 You are a Clinical Intake Engine for a Patient Registration Assistant. Analyze the user request and extract:
-- intent: exactly one of "register", "list", "delete", "book", "unknown"
+- intent: exactly one of "register", "list", "delete", "book", "list_bookings", "cancel_booking", "unknown"
 - data: a dict containing any fields mentioned (name, date_of_birth, patient_id, medications, date, time)
 - date_of_birth must be output in MM-DD-YYYY format
 - date for booking must be output in MM-DD-YYYY format
@@ -54,8 +54,9 @@ Extracted data and intent:
 Validation rules:
 - "register" intent requires all four fields: name, date_of_birth, patient_id, medications.
 - The "book" intent requires exactly three fields: patient_id, date, and time.
+- The "cancel_booking" intent requires exactly three fields: patient_id, date, and time.
 - patient_id must be of the form PT-XXXXXXXX
-- "list", "delete", and "unknown" intents have no required fields.
+- "list", "list_bookings", "delete", and "unknown" intents have no required fields.
 
 Return strict JSON only - no extra text:
 {{"complete": <true|false>, "missing": ["<field>", ...]}}
@@ -155,9 +156,25 @@ def process_request(user_input: str) -> dict:
             else: # "error"
                 return {"status": "error", "message": "Storage error while booking appointment.", "data": None}
 
+        elif intent == "list_bookings":
+            bookings = get_bookings()
+            return {"status": "success", "message": f"{len(bookings)} booking(s) found.", "data": bookings}
+
+        elif intent == "cancel_booking":
+            patient_id = data.get("patient_id")
+            date = data.get("date")
+            time = data.get("time")
+
+            cancellation_result = delete_booking(patient_id, date, time)
+            if cancellation_result == "success":
+                return {"status": "success", "message": "Appointment cancelled successfully.", "data": None}
+            elif cancellation_result == "not_found":
+                return {"status": "not_found", "message": "Appointment not found.", "data": None}
+            else: # "error"
+                return {"status": "error", "message": "Storage error during cancellation.", "data": None}
 
         else:  # unknown intent
-            return {"status": "unknown", "message": "I can register patients, list records, delete patient files, or book appointments. Please specify your request.", "data": None}
+            return {"status": "unknown", "message": "I can register patients, list records, delete patient files, book appointments, list bookings, or cancel bookings. Please specify your request.", "data": None}
 
     except Exception as exc:
         return {"status": "error", "message": str(exc), "data": None}

@@ -1,18 +1,3 @@
-"""
-The interface is the Presentation Layer (Skin) of the system.
-
-Architecture position:
-    interface -> engine -> storage
-
-This module collects user input from the terminal, passes it to
-process_request() in the engine layer, and formats the result dict
-into a human-readable string for display.
-
-This layer makes no AI calls and does not access storage directly.
-
-Replace every TODO with your implementation guided by the tests.
-"""
-
 from __future__ import annotations
 
 # Import process_request at the top so the patch path
@@ -32,6 +17,8 @@ _HELP_TEXT = (
     "  - List all registered patients\n"
     "  - Delete a patient record\n"
     "  - Book an appointment\n"
+    "  - List all bookings\n"
+    "  - Cancel an appointment\n"
     "Just describe what you want in plain English."
 )
 
@@ -55,10 +42,16 @@ def format_response(result: dict) -> str:
         response_str = message
         data = result.get("data")
         if isinstance(data, list) and data:
-            for patient in data:
-                name = patient.get("name", "Unknown Name")
-                patient_id = patient.get("patient_id", "Unknown ID")
-                response_str += f"\n  - {name} (ID: {patient_id})"
+            for item in data:
+                if "name" in item:  # Assume it's a patient
+                    name = item.get("name", "Unknown Name")
+                    patient_id = item.get("patient_id", "Unknown ID")
+                    response_str += f"\n  - {name} (ID: {patient_id})"
+                else:  # Assume it's a booking
+                    patient_id = item.get("patient_id", "Unknown Patient ID")
+                    date = item.get("date", "Unknown Date")
+                    time = item.get("time", "Unknown Time")
+                    response_str += f"\n  - Appointment for {patient_id} on {date} at {time}."
         return response_str
     elif status == "exists":
         return message

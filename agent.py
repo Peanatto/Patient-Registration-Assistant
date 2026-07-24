@@ -67,20 +67,16 @@ def main() -> int:
     )
 
     prompt = """
-        I need to add the ability to list and delete appointments in my storage layer. I have updated CONTRACT.md and FUNCTIONALITY.md to reflect these additions.
-        1. Update src/storage/storage_handler.py:
-        - Add a get_bookings() function that mimics get_patients(). It should open the "Appointments" worksheet using _get_worksheet("Appointments") 
-            and return get_all_records(). Handle exceptions by returning an empty list [].
-        - Add a delete_booking(patient_id: str, date: str, time: str) function. It should open the "Appointments" worksheet, fetch all records, and 
-            find the specific row number that matches all three parameters exactly. If found, use worksheet.delete_rows(row_number) and return 
-            "success". If no exact match is found, return "not_found". Catch any exceptions and return "error".
-        2. Update tests/storage/test_storage.py:
-        - Add get_bookings and delete_booking to the import list at the top.
-        - Add a success test for get_bookings().
-        - Add an exception handling test for get_bookings() that returns an empty list.
-        - Add a success test for delete_booking() (mocking the worksheet data and delete_rows).
-        - Add a "not_found" test for delete_booking() where the patient ID exists but the date/time do not match.
-        - Add an "error" test for delete_booking() simulating an API exception.
+        Now, please update tests/interface/test_interface.py to validate the new interface logic.
+        1. Add a test for formatting bookings:
+        - Create a new test named test_format_success_with_booking_list_shows_details().
+        - Create a mock result dictionary with "status": "success", a "message", and "data" containing a list of two booking dictionaries (they 
+            should have "patient_id", "date", and "time" keys, but no "name key).
+        - Pass this result to format_response().
+        - Assert that the expected patient_id, date, and time strings for both mock bookings appear in the output string.
+        2. Update the unknown intent test:
+        - In test_format_unknown_includes_help_text(), add an assertion to verify that the work "book" or "cancel" or "appointment" appears in the output, ensuring 
+            the new help text is being properly rendered.
         """
 
     print("Starting agent reasoning loop to implement green state...")
