@@ -207,3 +207,16 @@ def test_format_success_with_booking_list_shows_details():
     assert "PT-456" in output
     assert "2024-07-21" in output
     assert "14:30" in output
+
+
+# ---------------------------------------------------------------------------
+# Test 14: format_response — success with no data (inquiry response)
+# ---------------------------------------------------------------------------
+def test_format_success_with_no_data_returns_message():
+    result = {
+        "status": "success",
+        "message": "Bob takes acetaminophen and cetirizine.",
+        "data": None
+    }
+    output = format_response(result)
+    assert output == "Bob takes acetaminophen and cetirizine."

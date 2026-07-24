@@ -191,6 +191,19 @@ def test_book_storage_error_returns_error_status():
     mock_save_booking.assert_called_once_with("PT-33333333", "02-02-2024", "11:30")
 
 # ---------------------------------------------------------------------------
+# Test 15b: Booking conflict (time slot taken)
+# ---------------------------------------------------------------------------
+def test_book_conflict_returns_conflict_status():
+    with patch("src.engine.engine.verify_patient", return_value=True) as mock_verify_patient, \
+         patch("src.engine.engine.save_booking", return_value="conflict") as mock_save_booking:
+        result = process_request("Book an appointment for PT-44444444 on 10-15-2026 at 14:00.")
+    
+    assert result["status"] == "conflict"
+    assert "already booked" in result["message"]
+    mock_verify_patient.assert_called_once_with("PT-44444444")
+    mock_save_booking.assert_called_once_with("PT-44444444", "10-15-2026", "14:00")
+
+# ---------------------------------------------------------------------------
 # Test 16: List bookings
 # ---------------------------------------------------------------------------
 def test_list_bookings_returns_success_with_data():
@@ -253,3 +266,21 @@ def test_cancel_booking_missing_patient_id_returns_incomplete_status():
     assert "missing" in result
     assert "patient_id" in result["missing"]
     mock_delete.assert_not_called()
+
+# ---------------------------------------------------------------------------
+# Test 22: Inquiry intent — conversational chatbot response
+# ---------------------------------------------------------------------------
+def test_inquiry_returns_success_with_conversational_message():
+    # Mock the database so the AI has context to read from
+    mock_patients = [
+        {"name": "Alice Chen", "date_of_birth": "05-05-2002", "patient_id": "PT-12345432", "medications": "acetaminophen, cetirizine"}
+    ]
+    with patch("src.engine.engine.get_patients", return_value=mock_patients):
+        result = process_request("What medications does Alice Chen take?")
+    
+    assert result["status"] == "success"
+    # Because Gemini generates the exact wording dynamically, we verify the data shape
+    # and ensure the AI mentions the correct medication from the mock data.
+    assert "message" in result
+    assert result["data"] is None
+    assert "acetaminophen" in result["message"].lower()

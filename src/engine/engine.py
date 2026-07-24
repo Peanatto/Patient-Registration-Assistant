@@ -35,7 +35,7 @@ _MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
 _EXTRACTION_PROMPT = """
 You are a Clinical Intake Engine for a Patient Registration Assistant. Analyze the user request and extract:
-- intent: exactly one of "register", "list", "delete", "book", "list_bookings", "cancel_booking", "unknown"
+- intent: exactly one of "register", "list", "delete", "book", "list_bookings", "cancel_booking", "inquiry", "unknown"
 - data: a dict containing any fields mentioned (name, date_of_birth, patient_id, medications, date, time)
 - date_of_birth must be output in MM-DD-YYYY format
 - date for booking must be output in MM-DD-YYYY format
@@ -56,7 +56,7 @@ Validation rules:
 - The "book" intent requires exactly three fields: patient_id, date, and time.
 - The "cancel_booking" intent requires exactly three fields: patient_id, date, and time.
 - patient_id must be of the form PT-XXXXXXXX
-- "list", "list_bookings", "delete", and "unknown" intents have no required fields.
+- "list", "list_bookings", "delete", "inquiry", and "unknown" intents have no required fields.
 
 Return strict JSON only - no extra text:
 {{"complete": <true|false>, "missing": ["<field>", ...]}}
@@ -153,6 +153,8 @@ def process_request(user_input: str) -> dict:
             booking_result = save_booking(patient_id, date, time)
             if booking_result == "success":
                 return {"status": "success", "message": "Appointment booked successfully.", "data": None}
+            elif booking_result == "conflict":
+                return {"status": "conflict", "message": "That time slot is already booked by another patient. Please choose a different date or time.", "data": None}
             else: # "error"
                 return {"status": "error", "message": "Storage error while booking appointment.", "data": None}
 
@@ -172,6 +174,27 @@ def process_request(user_input: str) -> dict:
                 return {"status": "not_found", "message": "Appointment not found.", "data": None}
             else: # "error"
                 return {"status": "error", "message": "Storage error during cancellation.", "data": None}
+
+        elif intent == "inquiry":
+            # Grab the current database records for BOTH patients and appointments
+            patients = get_patients()
+            bookings = get_bookings()
+            
+            # Ask Gemini to answer the user's specific question using both databases
+            qa_prompt = (
+                f"Patient Database: {patients}\n"
+                f"Appointments Database: {bookings}\n\n"
+                f"User Question: {user_input}\n\n"
+                f"Answer the user's question conversationally based ONLY on the provided databases. "
+                f"If the information is not in the databases, say so."
+            )
+            
+            qa_response = client.models.generate_content(
+                model=_MODEL,
+                contents=qa_prompt
+            )
+            
+            return {"status": "success", "message": qa_response.text, "data": None}
 
         else:  # unknown intent
             return {"status": "unknown", "message": "I can register patients, list records, delete patient files, book appointments, list bookings, or cancel bookings. Please specify your request.", "data": None}

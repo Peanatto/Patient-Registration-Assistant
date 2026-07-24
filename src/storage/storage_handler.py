@@ -112,10 +112,30 @@ def save_booking(patient_id: str, date: str, time: str) -> str:
 
     Returns:
         "success" - record appended.
+        "conflict" - date and time already taken.
         "error"   - any unexpected exception.
     """
     try:
         worksheet = _get_worksheet("Appointments")
+
+        # Overlap check: ensure the date and time aren't already taken globally
+        existing_bookings = worksheet.get_all_records()
+        
+        # Normalize the target date and time
+        target_date = date.strip().lower()
+        target_time = time.strip().lower()
+        
+        for booking in existing_bookings:
+            # 1. Cast sheet values to strings
+            # 2. Provide a fallback to avoid NoneType errors
+            # 3. Normalize casing and whitespace
+            sheet_date = str(booking.get("date", "")).strip().lower()
+            sheet_time = str(booking.get("time", "")).strip().lower()
+            
+            if sheet_date == target_date and sheet_time == target_time:
+                return "conflict"
+
+        # Note: We append the original variables to preserve the user's intended casing
         worksheet.append_row([patient_id, date, time])
         return "success"
     except Exception:
@@ -148,11 +168,21 @@ def delete_booking(patient_id: str, date: str, time: str) -> str:
         row_to_delete = -1 # Initialize with a value indicating not found
 
         for i, record in enumerate(all_records):
-            # gspread.get_all_records() returns dictionaries with string keys/values.
-            # Compare directly. The row index for gspread is 1-based, plus 1 for header.
-            if (record.get("patient_id") == patient_id and
-                record.get("date") == date and
-                record.get("time") == time):
+            # 1. Cast to string to prevent gspread numeric/float type mismatches
+            # 2. Use .get(key, "") as a fallback to prevent NoneType errors
+            # 3. Normalize with .strip().lower()
+            sheet_id = str(record.get("patient_id", "")).strip().lower()
+            sheet_date = str(record.get("date", "")).strip().lower()
+            sheet_time = str(record.get("time", "")).strip().lower()
+
+            target_id = patient_id.strip().lower()
+            target_date = date.strip().lower()
+            target_time = time.strip().lower()
+
+            if (sheet_id == target_id and 
+                sheet_date == target_date and 
+                sheet_time == target_time):
+                
                 row_to_delete = i + 2  # +1 for 1-based index, +1 for header row
                 break
 

@@ -257,17 +257,40 @@ def test_verify_patient_exception():
 
 def test_save_booking_success():
     """
-    Tests successful appendage of an appointment.
+    Tests successful appendage of an appointment when no conflict exists.
+    """
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+
+        mock_worksheet.get_all_records.return_value = []
+        
+        result = save_booking("PT-12345", "10-15-2026", "2:00 PM")
+        
+        mock_get_worksheet.assert_called_once_with("Appointments")
+        mock_worksheet.get_all_records.assert_called_once()
+        mock_worksheet.append_row.assert_called_once_with(["PT-12345", "10-15-2026", "2:00 PM"])
+        assert result == "success"
+
+def test_save_booking_conflict_prevents_overlap():
+    """
+    Tests that a booking returns 'conflict' if the date and time are already taken.
     """
     with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
         mock_worksheet = MagicMock()
         mock_get_worksheet.return_value = mock_worksheet
         
+        # Mock an existing appointment at the exact same date and time (different patient)
+        mock_worksheet.get_all_records.return_value = [
+            {"patient_id": "PT-99999", "date": "10-15-2026", "time": "2:00 PM"}
+        ]
+        
+        # Attempt to book the same slot for a new patient
         result = save_booking("PT-12345", "10-15-2026", "2:00 PM")
         
-        mock_get_worksheet.assert_called_once_with("Appointments")
-        mock_worksheet.append_row.assert_called_once_with(["PT-12345", "10-15-2026", "2:00 PM"])
-        assert result == "success"
+        # Assert the conflict is caught and append_row is NEVER called
+        assert result == "conflict"
+        mock_worksheet.append_row.assert_not_called()
 
 def test_save_booking_exception():
     """

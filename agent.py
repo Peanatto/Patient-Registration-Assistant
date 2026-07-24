@@ -67,16 +67,30 @@ def main() -> int:
     )
 
     prompt = """
-        Now, please update tests/interface/test_interface.py to validate the new interface logic.
-        1. Add a test for formatting bookings:
-        - Create a new test named test_format_success_with_booking_list_shows_details().
-        - Create a mock result dictionary with "status": "success", a "message", and "data" containing a list of two booking dictionaries (they 
-            should have "patient_id", "date", and "time" keys, but no "name key).
-        - Pass this result to format_response().
-        - Assert that the expected patient_id, date, and time strings for both mock bookings appear in the output string.
-        2. Update the unknown intent test:
-        - In test_format_unknown_includes_help_text(), add an assertion to verify that the work "book" or "cancel" or "appointment" appears in the output, ensuring 
-            the new help text is being properly rendered.
+        I need a user-facing README.md for my project.
+
+        Context: Read FUNCTIONALITY.md, CONTRACT.md, cli.py, and requirements.txt.
+        Goal: Write README.md at the project root.
+
+        Sections to include:
+
+        1. Project name & Description: A one-paragraph description of what the Patient Registration Assistant does.
+
+        2. Setup: List every dependency and one-time configuration step. CRITICAL: You must explicitly instruct the user to create a .env file in the root directory and add GEMINI_API_KEY=your_api_key_here.
+
+        3. How to run: Provide the exact command to start the app (python -m src.interface.cli).
+
+        4. Usage examples: Provide 3-4 example inputs with their expected outputs, covering the core functionalities in FUNCTIONALITY.md (Registration, Inquiry, Booking).
+
+        - Constraint 1: Any example referencing a Patient ID MUST strictly use the format PT-XXXXXXXX (e.g., PT-85858585).
+
+        - Constraint 2: The "Expected Output" in these examples must visually match the exact formatting logic found in the format_response function in src/interface/cli.py (e.g., list items must be formatted as   - Name (ID: PT-XXXXXXXX)).
+
+        5. Project structure: A brief directory tree, list, or table explaining the layout of src/ and tests/. Include design docs and any other important branches.
+
+        6. Demo Video: Include a placeholder header and text for a 10-minute project demo video link.
+
+        Tone: Keep the tone practical, professional, and clean. Do not include lab instructions, assignment details, or academic context.
         """
 
     print("Starting agent reasoning loop to implement green state...")

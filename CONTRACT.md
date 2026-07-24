@@ -3,9 +3,9 @@
 ## Architecture Mapping
 
 ### Functionality 1 Mapping (Chatbot Support)
-- `interface` responsibilities: collect user question, display response (answer or fallback)
-- `engine` responsibilities: interpret question and produce response
-- `storage` responsibilities: None, basic chatbot support does not require
+- `interface` responsibilities: collect user question, display conversational response
+- `engine` responsibilities: interpret the "inquiry" intent, coordinate with storage to fetch current context, and use the LLM to generate an answer based on the data
+- `storage` responsibilities: retrieve all active patient and appointment records to provide context to the engine
 
 ### Functionality 2 Mapping (Patient Registration)
 - `interface` responsibilities: form submission with name/date of birth/patient ID number/medications, then show result message
@@ -33,10 +33,16 @@
 
 ### Functionality 1
 **`interface -> engine`**
-- Function(s): `get_response(user_query: str)`
-- Input payload: `user_query`
-- Return payload/status: `{"status": "success", "data": {"answer": "Bob takes acetaminophen and cetirizine."}}`
-- Failure statuses: `{"status": "not_found", "message": "This patient is not in our system."}`
+- Function(s): `process_request(user_input: str)` (handled via the "inquiry" intent)
+- Input payload: `user_input`
+- Return payload/status: `{"status": "success", "message": "Bob takes acetaminophen and his next appointment is 10-15-2026.", "data": None}`
+- Failure statuses: `{"status": "error", "message": "API or Storage failure."}`
+
+**`engine -> storage`**
+- Function(s): `get_patients()` and `get_bookings()`
+- Input payload: None
+- Return payload/status: Lists containing dictionaries of current database records
+- Failure statuses: `[]` (empty lists returned if database is empty)
 
 ### Functionality 2
 **`interface -> engine`**
@@ -82,7 +88,7 @@
 - Function(s): `process_request(user_input: str)` (handled via a new "book" intent)
 - Input payload: `user_input`
 - Return payload/status: `{"status": "success", "message": "Appointment booked successfully."}`
-- Failure statuses: `{"status": "not_found", "message": "Patient not found."}, {"status": "incomplete", "missing": ["time"]}`
+- Failure statuses: `{"status": "not_found", "message": "Patient not found."}, {"status": "incomplete", "missing": ["time"]}, {"status":        "conflict", "message": "That time slot is already booked..."}`
 
 **`engine -> storage`**
 - Function(s): `verify_patient(patient_id: str)`
@@ -93,7 +99,7 @@
 - Function(s): `save_booking(patient_id: str, date: str, time: str)`
 - Input payload: `patient_id`, `date`, `time`
 - Return payload/status: `"success"`
-- Failure statuses: `"error"` (API failure)
+- Failure statuses: `"conflict"` (time slot already exists in sheet), `"error"` (API failure)
 
 ### Functionality 6 Mapping (Appointment Directory)
 - `interface` responsibilities: capture user requests to view appointments and display outcomes

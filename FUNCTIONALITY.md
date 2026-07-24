@@ -1,12 +1,12 @@
 # FUNCTIONALITY.md
 
 ## Functionality 1: Chatbot Support
-- **Input:** Open-ended user question (e.g., "What medications does [patient] require?")
-- **Output:** Natural-language response provided to user
-- **Success:** Answer relevant to user prompt is returned
+- **Input:** Open-ended user question about clinical records or schedules (e.g., "What medications does PT-12345678 take?" or "When is their next appointment?")
+- **Output:** Natural-language, conversational response provided to the user
+- **Success:** The system successfully retrieves both the patient and appointment databases, uses them as context, and returns an accurate answer based strictly on the stored data.
 - **Failure/Edge Cases:** 
-    - Unknown question -> return fallback response such as "Not enough information to provide a solid answer."
-    - Empty input -> return prompt to user to enter question
+    - Unknown question / Data not found -> The LLM informs the user that the requested information is not in the provided database.
+    - Empty input -> System ignores and prompts the user to enter a question.
 
 ## Functionality 2: Patient Registration
 - **Input:** Open-ended text or form submission with fields (name, date of birth, patient ID, medications)
@@ -40,6 +40,7 @@
 - **Failure/Edge Cases:**
     - Patient ID does not exist -> return "Patient not found. Please register the patient first."
     - Missing date or time -> return validation error and prompt for missing information
+    - Time Slot Taken -> return `conflict` status and prompt the user to choose another time (prevents double-booking)
 
 ## Functionality 6: Appointment Directory
 - **Input:** Open-ended user command to list bookings (e.g., "Show all appointments")

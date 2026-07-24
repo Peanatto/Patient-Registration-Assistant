@@ -19,6 +19,7 @@ _HELP_TEXT = (
     "  - Book an appointment\n"
     "  - List all bookings\n"
     "  - Cancel an appointment\n"
+    "  - Answer questions about patient records\n"
     "Just describe what you want in plain English."
 )
 
