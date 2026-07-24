@@ -124,8 +124,6 @@ The project follows a modular structure to ensure separation of concerns and mai
 
 ## Demo Video
 
-<video src="./assets/CS180_demo.mp4" width="100%" controls>
-  Your browser does not support the video tag.
-</video>
+[![Watch the Demo Video]](https://youtu.be/_i2pGaC24h0)
 
 Note: the cancellation error is due to an exact time mismatch. The sheet had 04:00 PM, and I gave 4:00 PM. After changing to match, it worked.
