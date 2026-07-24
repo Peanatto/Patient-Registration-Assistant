@@ -32,3 +32,11 @@
 - **Failure/Edge Cases:**
     - Patient ID does not exist -> return "Patient ID not found in the database."
     - Input lacks specific ID -> prompt the user to provide the exact patient ID to prevent accidental deletions
+
+## Functionality 5: Appointment Booking
+- **Input:** User command containing a patient ID, a date, and a time (e.g., "Book PT-12345678 for 10-15-2026 at 2:00 PM")
+- **Output:** Confirmation message of the booked appointment
+- **Success:** The system verifies the patient ID exists, then saves the booking details to the Appointments tab
+- **Failure/Edge Cases:**
+    - Patient ID does not exist -> return "Patient not found. Please register the patient first."
+    - Missing date or time -> return validation error and prompt for missing information

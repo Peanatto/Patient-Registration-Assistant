@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from src.storage.storage_handler import save_patient, _get_worksheet, SPREADSHEET_NAME, _SERVICE_ACCOUNT_PATH, get_patients, delete_patient
+from src.storage.storage_handler import save_patient, _get_worksheet, SPREADSHEET_NAME, _SERVICE_ACCOUNT_PATH, get_patients, delete_patient, verify_patient, save_booking
 
 # Test 1: Happy Path
 def test_save_new_patient_success():
@@ -35,8 +35,8 @@ def test_missing_fields_error():
 def test_get_worksheet_successful_access():
     """
     Tests that _get_worksheet successfully authenticates and opens the correct sheet.
-    This covers lines 28-29 in src/storage/storage_handler.py.
     """
+    from src.storage.storage_handler import _get_worksheet, _SERVICE_ACCOUNT_PATH, SPREADSHEET_NAME
     with patch('gspread.service_account') as mock_service_account:
         mock_client = MagicMock()
         mock_service_account.return_value = mock_client
@@ -44,19 +44,14 @@ def test_get_worksheet_successful_access():
         mock_spreadsheet = MagicMock()
         mock_client.open.return_value = mock_spreadsheet
 
-        mock_worksheet = MagicMock()
-        # Mocking .sheet1 as an attribute directly, as it's typically accessed like that
-        type(mock_spreadsheet).sheet1 = MagicMock(return_value=mock_worksheet)
-
-
-        # Call the function under test
-        returned_worksheet = _get_worksheet()
+        # Call the function under test with a tab name
+        _get_worksheet("Patients")
 
         # Assertions
         mock_service_account.assert_called_once_with(filename=str(_SERVICE_ACCOUNT_PATH))
         mock_client.open.assert_called_once_with(SPREADSHEET_NAME)
-        # Verify that sheet1 was accessed. Since it's an attribute, we check the returned object.
-        assert returned_worksheet == mock_spreadsheet.sheet1
+        # Verify that the specific worksheet tab was requested
+        mock_spreadsheet.worksheet.assert_called_once_with("Patients")
 
 # New test for lines 59-60 in src/storage/storage_handler.py (exception handling)
 def test_save_patient_exception_during_worksheet_access():
@@ -220,4 +215,65 @@ def test_delete_patient_error_on_delete_rows():
         mock_get_worksheet.assert_called_once()
         mock_worksheet.find.assert_called_once_with(patient_id_to_delete, in_column=3)
         mock_worksheet.delete_rows.assert_called_once_with(5)
+        assert result == "error"
+
+
+# --- New tests for verify_patient ---
+
+def test_verify_patient_true():
+    """Tests verify_patient when the patient exists."""
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet, \
+         patch('src.storage.storage_handler._existing_ids') as mock_existing_ids:
+        
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+        mock_existing_ids.return_value = {"pt-12345", "pt-99999"}
+        
+        result = verify_patient("PT-12345")
+        
+        mock_get_worksheet.assert_called_once_with("Patients")
+        assert result is True
+
+def test_verify_patient_false():
+    """Tests verify_patient when the patient does not exist."""
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet, \
+         patch('src.storage.storage_handler._existing_ids') as mock_existing_ids:
+        
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+        mock_existing_ids.return_value = {"pt-12345"}
+        
+        result = verify_patient("PT-00000")
+        
+        assert result is False
+
+def test_verify_patient_exception():
+    """Tests exception handling in verify_patient."""
+    with patch('src.storage.storage_handler._get_worksheet', side_effect=Exception("API Error")):
+        result = verify_patient("PT-12345")
+        assert result is False
+
+# --- New tests for save_booking ---
+
+def test_save_booking_success():
+    """Tests successful appendage of an appointment."""
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+        
+        result = save_booking("PT-12345", "10-15-2026", "2:00 PM")
+        
+        mock_get_worksheet.assert_called_once_with("Appointments")
+        mock_worksheet.append_row.assert_called_once_with(["PT-12345", "10-15-2026", "2:00 PM"])
+        assert result == "success"
+
+def test_save_booking_exception():
+    """Tests exception handling during save_booking."""
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+        mock_worksheet.append_row.side_effect = Exception("Write error")
+        
+        result = save_booking("PT-12345", "10-15-2026", "2:00 PM")
+        
         assert result == "error"

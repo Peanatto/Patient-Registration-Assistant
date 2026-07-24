@@ -67,15 +67,21 @@ def main() -> int:
     )
 
     prompt = """
-        I need additional tests to cover the following gap in my test suite.
-        Context: Read the relevant source file and its existing test file.
-        Gap identified: in src/storage/storage_handler.py is not being tested (test file: tests/storage/test_storage.py). It involves testing "success", both "not_found", and "error" paths in delete_patient().
-        Requirements:
-        1. Write a pytest test function with a descriptive name (may need more than one).
-        2. The test must exercise the specific uncovered path.
-        3. Use ONLY the same mocking patterns already established in the test file (e.g., unittest.mock.patch for storage functions).
-        4. Do not modify existing tests.
-        5. The new test must pass.
+        I need to add appointment booking functionality to my JSON-extracting engine. src/engine/engine.py is done. ONLY implement tests.
+        1. Update src/engine/engine.py:
+        - Import save_booking and verify_patient from src.storage.storage_handler.
+        - Update _EXTRACTION_PROMPT to include a new intent: "book". Instruct it to extract date (MM-DD-YYYY) and time into the data dictionary.
+        - Update _REFLECTION_PROMPT to add a fule: "The "book" intent requires exactly three fields: patient_id, date, and time.
+        - In the Step 3 Dispatch block, add an elif intent == "book": path.
+        - Crucial Logic: Before calling save_booking, use verify_patient(patient_id). If it returns false, return a "not_found" status with a message 
+            that the patient ID was not found. If True, proceed to save_booking and return the appropriate "success" or "error" status dicts.
+        2. Look into src/engine/engine.py and update tests/engine/test_engine.py:
+        Add four new tests using @patch:
+        - Test 1: Booking success (patch verify_patient to return True, patch save_booking to return "success").
+        - Test 2: Booking patient not found (patch verify_patient to return False—ensure save_booking is NOT called).
+        - Test 3: Booking incomplete (prompt the engine to "book an appointment for PT-12345432" without a date/time. Expect an "incomplete" status from the reflection step).
+        - Test 4: Booking storage error (patch verify_patient to return True, patch save_booking to return "error").
+        Ensure all patches use the correct usage path: src.engine.engine.<function_name>.
         """
 
     print("Starting agent reasoning loop to implement green state...")

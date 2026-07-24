@@ -22,6 +22,11 @@
 - `engine` responsibilities: parse the target patient ID from the input and route the delete command
 - `storage` responsibilities: find the corresponding row by patient ID and remove it from the database
 
+### Functionality 5 Mapping (Appointment Booking)
+- `interface` responsibilities: capture user request to book an appointment and display outcome
+- `engine` responsibilities: extract patient_id, date, and time; validate completeness; coordinate with storage
+- `storage` responsibilities: verify patient exists in "Patients" tab, append new row to "Appointments" tab
+
 ---
 
 ## Interface Contracts
@@ -71,3 +76,21 @@
 - Input payload: `patient_id`
 - Return payload/status: `"success"`
 - Failure statuses: `"not_found"` (ID missing from sheet), `"error"` (API failure)
+
+### Functionality 5
+**`interface -> engine`**
+- Function(s): `process_request(user_input: str)` (handled via a new "book" intent)
+- Input payload: `user_input`
+- Return payload/status: `{"status": "success", "message": "Appointment booked successfully."}`
+- Failure statuses: `{"status": "not_found", "message": "Patient not found."}, {"status": "incomplete", "missing": ["time"]}`
+
+**`engine -> storage`**
+- Function(s): `verify_patient(patient_id: str)`
+- Input payload: `patient_id`
+- Return payload/status: `True` or `False`
+
+**`engine -> storage`**
+- Function(s): `save_booking(patient_id: str, date: str, time: str)`
+- Input payload: `patient_id`, `date`, `time`
+- Return payload/status: `"success"`
+- Failure statuses: `"error"` (API failure)
