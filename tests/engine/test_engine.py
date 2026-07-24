@@ -93,3 +93,48 @@ def test_delete_not_found_returns_correct_status():
         result = process_request("Remove patient record with ID PT-99999999.")
     assert result["status"] == "not_found"
     assert "message" in result
+
+
+# ---------------------------------------------------------------------------
+# Test 8: Register — storage error path (covers line 122)
+# ---------------------------------------------------------------------------
+def test_register_storage_error_returns_error_status():
+    with patch("src.engine.engine.save_patient", return_value="error"):
+        result = process_request(
+            "Register John Doe, date_of_birth 01-15-1990, patient_id PT-98765432, medications of ibuprofen."
+        )
+    assert result["status"] == "error"
+    assert result["message"] == "Storage error while saving patient."
+
+
+# ---------------------------------------------------------------------------
+# Test 9: Delete — missing patient ID (covers line 131)
+# ---------------------------------------------------------------------------
+def test_delete_missing_patient_id_returns_error_status():
+    with patch("src.engine.engine.delete_patient") as mock_delete:
+        result = process_request("Delete a patient record without providing an ID.")
+    assert result["status"] == "error"
+    assert result["message"] == "Patient ID not provided for deletion."
+    mock_delete.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Test 10: Delete — storage error path (covers line 139)
+# ---------------------------------------------------------------------------
+def test_delete_storage_error_returns_error_status():
+    with patch("src.engine.engine.delete_patient", return_value="error"):
+        result = process_request("Delete patient record PT-55555555 due to an issue.")
+    assert result["status"] == "error"
+    assert result["message"] == "Storage error during deletion."
+
+
+# ---------------------------------------------------------------------------
+# Test 11: General exception handling (covers lines 144-145)
+# ---------------------------------------------------------------------------
+def test_process_request_exception_handling_returns_error_status():
+    with patch("src.engine.engine.genai.Client") as mock_client_class:
+        mock_client_class.side_effect = ValueError("Simulated API client error")
+        result = process_request("Any input will do as the client initialization will fail.")
+    assert result["status"] == "error"
+    assert "Simulated API client error" in result["message"]
+    assert result["data"] is None

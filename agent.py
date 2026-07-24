@@ -11,6 +11,7 @@ def write_code_file(filename: str, code: str) -> str:
     """
     Creates a Python file at the specified path and writes the provided code into it. This file will
     only be created if it resolves to a path within the current project directory. If the file already exists, it will be overwritten.
+    IMPORTANT: Provide the 'code' argument as a raw, unescaped string. Do not double-escape newlines or quotes.
     """
     safe_directory = pathlib.Path(__file__).parent.resolve()
     
@@ -25,7 +26,7 @@ def write_code_file(filename: str, code: str) -> str:
     # Ensure subdirectories exist
     target_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(target_path, "w") as f:
+    with open(target_path, "w", encoding="utf-8") as f:
         f.write(code)
 
     return f"File '{filename}' created successfully at '{target_path}'."
@@ -66,36 +67,15 @@ def main() -> int:
     )
 
     prompt = """
-        I am implementing the Interface layer for patient-registration-assistant.
-        Context: Read CONTRACT.md, FUNCTIONALITY.md, src/engine/engine.py, and tests/interface/test_interface.py.
-        Goal: Implement format_response(result: dict) -> str and run_session(process_fn=None)
-            in src/interface/cli.py.
+        I need additional tests to cover the following gap in my test suite.
+        Context: Read the relevant source file and its existing test file.
+        Gap identified: in src/storage/storage_handler.py is not being tested (test file: tests/storage/test_storage.py). It involves testing "success", both "not_found", and "error" paths in delete_patient().
         Requirements:
-        1. format_response: Read result["status"] and return a formatted string for each case:
-        - "success"    → start with result["message"]; if result.get("data") is a non-empty
-                            list, append each patient's name and ID on an indented line,
-                            e.g., "  - {name} ({patient_id})".
-        - "exists"     → return result["message"].
-        - "incomplete" → return result["message"] + "\n  Missing: " +
-                            ", ".join(result["missing"]).
-        - "unknown"    → return result["message"] + "\n\n" + _HELP_TEXT.
-        - "error" and all other statuses → return result.get("message", "Unexpected response.").
-        Do not raise; always return a string.
-        2. run_session: Loop calling input("You: ") to read one line at a time.
-        - Skip blank lines (after strip).
-        - Exit cleanly (print a goodbye message and return) when the line equals "quit"
-            or "exit" (case-insensitive), or when EOFError is raised.
-        - For all other input, call process_fn(user_input) to get a result dict,
-            then print "Assistant: " followed by format_response(result).
-        - Print a blank line after each response for readability.
-        3. process_fn defaults to process_request imported from src.engine.engine at the
-        top of cli.py. Inside run_session, always call process_fn(user_input) —
-        never call process_request directly — so tests can inject a mock.
-        4. Import process_request at the top of cli.py:
-            from src.engine.engine import process_request
-        This ensures the patch path "src.interface.cli.process_request" is valid if needed.
-        5. Do not modify or weaken any tests.
-        6. Do not modify any base code that does not need to be modified. Simply add the required implementations
+        1. Write a pytest test function with a descriptive name (may need more than one).
+        2. The test must exercise the specific uncovered path.
+        3. Use ONLY the same mocking patterns already established in the test file (e.g., unittest.mock.patch for storage functions).
+        4. Do not modify existing tests.
+        5. The new test must pass.
         """
 
     print("Starting agent reasoning loop to implement green state...")
