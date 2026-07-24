@@ -40,3 +40,18 @@
 - **Failure/Edge Cases:**
     - Patient ID does not exist -> return "Patient not found. Please register the patient first."
     - Missing date or time -> return validation error and prompt for missing information
+
+## Functionality 6: Appointment Directory
+- **Input:** Open-ended user command to list bookings (e.g., "Show all appointments")
+- **Output:** Formatted display of all appointments
+- **Success:** System retrieves a readable list of appointments
+- **Failure/Edge Cases:**
+    - Database empty/API error -> return fallback indicating retrieval failure
+
+## Functionality 7: Appointment Cancellation
+- **Input:** Command identifying a specific appointment to cancel (e.g., "Cancel the appointment for PT-12345 on 10-15-2026 at 2:00 PM")
+- **Output:** Confirmation message of cancellation
+- **Success:** System successfully locates and removes the target appointment row from the database
+- **Failure/Edge Cases:**
+    - Appointment not found -> return "Appointment not found for that patient at that specific date and time."
+    - Missing required fields -> return missing field list (e.g., date or time) along with `incomplete` status

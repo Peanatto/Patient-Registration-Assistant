@@ -176,3 +176,12 @@ def test_cli_main_block_executes_run_session(monkeypatch, capsys):
     # 3. Verify run_session actually ran by checking stdout for the exit message
     captured = capsys.readouterr()
     assert "Goodbye!" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# Test 12: format_response — not_found status returns message
+# ---------------------------------------------------------------------------
+def test_format_not_found_returns_message():
+    result = {"status": "not_found", "message": "Cannot book appointment. Patient ID PT-99999999 not found.", "data": None}
+    output = format_response(result)
+    assert "not found" in output

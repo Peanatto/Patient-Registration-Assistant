@@ -120,3 +120,47 @@ def save_booking(patient_id: str, date: str, time: str) -> str:
         return "success"
     except Exception:
         return "error"
+
+def get_bookings() -> list[dict]:
+    """Return all appointment records as a list of dicts keyed by the header row.
+
+    Returns [] when the sheet has no data rows or on any exception.
+    """
+    try:
+        worksheet = _get_worksheet("Appointments")
+        return worksheet.get_all_records()
+    except Exception:
+        return []
+
+def delete_booking(patient_id: str, date: str, time: str) -> str:
+    """Delete the first row in "Appointments" whose patient_id, date, and time
+    columns match the provided values exactly.
+
+    Returns:
+        "success"   - matching row found and deleted.
+        "not_found" - no row contains the exact patient_id, date, and time.
+        "error"     - any exception during the operation.
+    """
+    try:
+        worksheet = _get_worksheet("Appointments")
+        all_records = worksheet.get_all_records()
+
+        row_to_delete = -1 # Initialize with a value indicating not found
+
+        for i, record in enumerate(all_records):
+            # gspread.get_all_records() returns dictionaries with string keys/values.
+            # Compare directly. The row index for gspread is 1-based, plus 1 for header.
+            if (record.get("patient_id") == patient_id and
+                record.get("date") == date and
+                record.get("time") == time):
+                row_to_delete = i + 2  # +1 for 1-based index, +1 for header row
+                break
+
+        if row_to_delete != -1:
+            worksheet.delete_rows(row_to_delete)
+            return "success"
+        else:
+            return "not_found"
+
+    except Exception:
+        return "error"

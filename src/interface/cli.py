@@ -31,6 +31,7 @@ _HELP_TEXT = (
     "  - Register a new patient\n"
     "  - List all registered patients\n"
     "  - Delete a patient record\n"
+    "  - Book an appointment\n"
     "Just describe what you want in plain English."
 )
 

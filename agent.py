@@ -67,21 +67,20 @@ def main() -> int:
     )
 
     prompt = """
-        I need to add appointment booking functionality to my JSON-extracting engine. src/engine/engine.py is done. ONLY implement tests.
-        1. Update src/engine/engine.py:
-        - Import save_booking and verify_patient from src.storage.storage_handler.
-        - Update _EXTRACTION_PROMPT to include a new intent: "book". Instruct it to extract date (MM-DD-YYYY) and time into the data dictionary.
-        - Update _REFLECTION_PROMPT to add a fule: "The "book" intent requires exactly three fields: patient_id, date, and time.
-        - In the Step 3 Dispatch block, add an elif intent == "book": path.
-        - Crucial Logic: Before calling save_booking, use verify_patient(patient_id). If it returns false, return a "not_found" status with a message 
-            that the patient ID was not found. If True, proceed to save_booking and return the appropriate "success" or "error" status dicts.
-        2. Look into src/engine/engine.py and update tests/engine/test_engine.py:
-        Add four new tests using @patch:
-        - Test 1: Booking success (patch verify_patient to return True, patch save_booking to return "success").
-        - Test 2: Booking patient not found (patch verify_patient to return False—ensure save_booking is NOT called).
-        - Test 3: Booking incomplete (prompt the engine to "book an appointment for PT-12345432" without a date/time. Expect an "incomplete" status from the reflection step).
-        - Test 4: Booking storage error (patch verify_patient to return True, patch save_booking to return "error").
-        Ensure all patches use the correct usage path: src.engine.engine.<function_name>.
+        I need to add the ability to list and delete appointments in my storage layer. I have updated CONTRACT.md and FUNCTIONALITY.md to reflect these additions.
+        1. Update src/storage/storage_handler.py:
+        - Add a get_bookings() function that mimics get_patients(). It should open the "Appointments" worksheet using _get_worksheet("Appointments") 
+            and return get_all_records(). Handle exceptions by returning an empty list [].
+        - Add a delete_booking(patient_id: str, date: str, time: str) function. It should open the "Appointments" worksheet, fetch all records, and 
+            find the specific row number that matches all three parameters exactly. If found, use worksheet.delete_rows(row_number) and return 
+            "success". If no exact match is found, return "not_found". Catch any exceptions and return "error".
+        2. Update tests/storage/test_storage.py:
+        - Add get_bookings and delete_booking to the import list at the top.
+        - Add a success test for get_bookings().
+        - Add an exception handling test for get_bookings() that returns an empty list.
+        - Add a success test for delete_booking() (mocking the worksheet data and delete_rows).
+        - Add a "not_found" test for delete_booking() where the patient ID exists but the date/time do not match.
+        - Add an "error" test for delete_booking() simulating an API exception.
         """
 
     print("Starting agent reasoning loop to implement green state...")

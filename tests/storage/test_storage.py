@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from src.storage.storage_handler import save_patient, _get_worksheet, SPREADSHEET_NAME, _SERVICE_ACCOUNT_PATH, get_patients, delete_patient, verify_patient, save_booking
+from src.storage.storage_handler import save_patient, _get_worksheet, SPREADSHEET_NAME, _SERVICE_ACCOUNT_PATH, get_patients, delete_patient, verify_patient, save_booking, get_bookings, delete_booking
 
 # Test 1: Happy Path
 def test_save_new_patient_success():
@@ -256,7 +256,9 @@ def test_verify_patient_exception():
 # --- New tests for save_booking ---
 
 def test_save_booking_success():
-    """Tests successful appendage of an appointment."""
+    """
+    Tests successful appendage of an appointment.
+    """
     with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
         mock_worksheet = MagicMock()
         mock_get_worksheet.return_value = mock_worksheet
@@ -268,7 +270,9 @@ def test_save_booking_success():
         assert result == "success"
 
 def test_save_booking_exception():
-    """Tests exception handling during save_booking."""
+    """
+    Tests exception handling during save_booking.
+    """
     with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
         mock_worksheet = MagicMock()
         mock_get_worksheet.return_value = mock_worksheet
@@ -276,4 +280,113 @@ def test_save_booking_exception():
         
         result = save_booking("PT-12345", "10-15-2026", "2:00 PM")
         
+        assert result == "error"
+
+# --- New tests for get_bookings ---
+def test_get_bookings_success():
+    """
+    Tests the successful retrieval of appointment records using get_bookings.
+    """
+    mock_bookings_data = [
+        {"patient_id": "PT-001", "date": "2023-11-01", "time": "10:00 AM"},
+        {"patient_id": "PT-002", "date": "2023-11-02", "time": "11:00 AM"},
+    ]
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+        mock_worksheet.get_all_records.return_value = mock_bookings_data
+
+        result = get_bookings()
+        
+        mock_get_worksheet.assert_called_once_with("Appointments")
+        mock_worksheet.get_all_records.assert_called_once()
+        assert result == mock_bookings_data
+
+def test_get_bookings_exception_handling():
+    """
+    Tests the exception handling in get_bookings, ensuring it returns an empty list on failure.
+    """
+    with patch('src.storage.storage_handler._get_worksheet', side_effect=Exception("Worksheet access failed")):\
+        result = get_bookings()
+    assert result == []
+
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+        mock_worksheet.get_all_records.side_effect = Exception("Failed to get records")
+
+        result = get_bookings()
+        
+        mock_get_worksheet.assert_called_once()
+        mock_worksheet.get_all_records.assert_called_once()
+        assert result == []
+
+# --- New tests for delete_booking ---
+def test_delete_booking_success():
+    """
+    Tests the successful deletion of an appointment record.
+    """
+    mock_appointments_data = [
+        {"patient_id": "PT-001", "date": "2023-11-01", "time": "10:00 AM"},
+        {"patient_id": "PT-002", "date": "2023-11-02", "time": "11:00 AM"},
+        {"patient_id": "PT-001", "date": "2023-11-03", "time": "09:00 AM"},
+    ]
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+        mock_worksheet.get_all_records.return_value = mock_appointments_data
+
+        patient_id_to_delete = "PT-002"
+        date_to_delete = "2023-11-02"
+        time_to_delete = "11:00 AM"
+        result = delete_booking(patient_id_to_delete, date_to_delete, time_to_delete)
+
+        mock_get_worksheet.assert_called_once_with("Appointments")
+        mock_worksheet.get_all_records.assert_called_once()
+        # The row index in gspread is 1-based, and there's a header row, so index 1 (0-based) is row 2.
+        mock_worksheet.delete_rows.assert_called_once_with(3) # PT-002 is at 0-indexed position 1, so 1+2 = 3
+        assert result == "success"
+
+def test_delete_booking_not_found():
+    """
+    Tests deletion when the exact appointment is not found.
+    """
+    mock_appointments_data = [
+        {"patient_id": "PT-001", "date": "2023-11-01", "time": "10:00 AM"},
+        {"patient_id": "PT-002", "date": "2023-11-02", "time": "11:00 AM"},
+    ]
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+        mock_worksheet.get_all_records.return_value = mock_appointments_data
+
+        # Mismatch in time
+        result = delete_booking("PT-001", "2023-11-01", "10:30 AM")
+
+        mock_get_worksheet.assert_called_once_with("Appointments")
+        mock_worksheet.get_all_records.assert_called_once()
+        mock_worksheet.delete_rows.assert_not_called() # Ensure delete_rows is not called
+        assert result == "not_found"
+
+def test_delete_booking_error_on_worksheet_access():
+    """
+    Tests exception handling when _get_worksheet fails during delete_booking.
+    """
+    with patch('src.storage.storage_handler._get_worksheet', side_effect=Exception("Worksheet access error")):\
+        result = delete_booking("PT-ANY", "ANY-DATE", "ANY-TIME")
+    assert result == "error"
+
+def test_delete_booking_error_on_get_all_records():
+    """
+    Tests exception handling when get_all_records fails during delete_booking.
+    """
+    with patch('src.storage.storage_handler._get_worksheet') as mock_get_worksheet:
+        mock_worksheet = MagicMock()
+        mock_get_worksheet.return_value = mock_worksheet
+        mock_worksheet.get_all_records.side_effect = Exception("Failed to get all records")
+
+        result = delete_booking("PT-ANY", "ANY-DATE", "ANY-TIME")
+        
+        mock_get_worksheet.assert_called_once()
+        mock_worksheet.get_all_records.assert_called_once()
         assert result == "error"
