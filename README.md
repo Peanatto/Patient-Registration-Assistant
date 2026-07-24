@@ -124,7 +124,7 @@ The project follows a modular structure to ensure separation of concerns and mai
 
 ## Demo Video
 
-<video src="./assets/demo-video.mp4" width="100%" controls>
+<video src="./assets/CS180_demo.mp4" width="100%" controls>
   Your browser does not support the video tag.
 </video>
 
